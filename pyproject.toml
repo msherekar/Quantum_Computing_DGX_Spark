@@ -1,0 +1,19 @@
+[project]
+name = "quantum-computing-dgx-spark"
+version = "0.1.0"
+description = "Quantum circuit simulation environment for NVIDIA DGX Spark using CUDA Quantum."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "cuda-quantum-cu13>=0.14.0",
+    "cudaq",
+    "numpy",
+    "psutil",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false

@@ -1,0 +1,566 @@
+      Quantum Circuit Simulation on
+           NVIDIA DGX Spark
+                    Complete Guide: From 15 Qubits to Maximum Scale
+
+Executive Summary ........................................................................................................................ 3
+1. Environment Setup and Prerequisites ........................................................................................ 3
+   1.1 System Requirements .......................................................................................................... 3
+   1.2 Installing CUDA Quantum .................................................................................................... 3
+   1.3 Installing cuQuantum Appliance (Alternative) ....................................................................... 3
+2. Simulating a 15-Qubit Circuit (Step-by-Step).............................................................................. 5
+   2.1 Understanding Memory Requirements ................................................................................. 5
+   2.2 Creating the Quantum Circuit ............................................................................................... 5
+   2.3 Running the Simulation ........................................................................................................ 6
+   2.4 Advanced Circuit: Quantum Fourier Transform (QFT) ......................................................... 6
+3. Scaling to Maximum Capacity (33+ Qubits)................................................................................ 8
+   3.1 Memory Scaling Analysis ..................................................................................................... 8
+   3.2 Implementing a 33-Qubit Circuit ........................................................................................... 8
+4. Beyond 33 Qubits: Tensor Network Methods ........................................................................... 10
+   4.1 Matrix Product State (MPS) Simulation .............................................................................. 10
+   4.2 When to Use Tensor Networks ........................................................................................... 10
+5. Performance Optimization and Best Practices ......................................................................... 12
+   5.1 Backend Selection Strategy ............................................................................................... 12
+   5.2 Memory Monitoring ............................................................................................................. 12
+   5.3 Batch Processing for Large Experiments ........................................................................... 13
+6. Practical Applications and Examples ........................................................................................ 14
+   6.1 Quantum Chemistry: Molecular Simulation ........................................................................ 14
+   6.2 Quantum Machine Learning: Feature Maps ....................................................................... 14
+   6.3 Quantum Optimization: QAOA ........................................................................................... 15
+7. Troubleshooting and Common Issues ...................................................................................... 16
+   7.1 Memory Issues ................................................................................................................... 16
+   7.2 Performance Issues ............................................................................................................ 16
+   7.3 Installation Issues ............................................................................................................... 16
+8. Additional Resources and Next Steps ...................................................................................... 17
+   8.1 Official Documentation ....................................................................................................... 17
+   8.2 Example Repositories ......................................................................................................... 17
+   8.3 Next Steps .......................................................................................................................... 17
+Conclusion .................................................................................................................................... 18
+Executive Summary
+This comprehensive guide provides step-by-step instructions for simulating quantum
+circuits on my NVIDIA DGX Spark system, leveraging CUDA Quantum and the
+cuQuantum Appliance. My DGX Spark's 128GB unified memory enables simulation
+of circuits ranging from educational examples to enterprise-scale quantum
+algorithms.
+
+          Method                    Max Qubits                Memory Used
+
+ State Vector (Full)                 33 qubits                  ~128 GB
+ Tensor Network (MPS)               40+ qubits                Varies (bond-
+                                                               dependent)
+ Recommended (15                     15 qubits                  ~512 KB
+ qubits)
+
+
+
+
+1. Environment Setup and Prerequisites
+1.1 System Requirements
+My DGX Spark system provides optimal capabilities for quantum simulation:
+   •   128GB Unified Memory - Enables simulation of up to 33 qubits using state
+       vector methods
+   •   NVIDIA Grace CPU + Hopper GPU - Optimized architecture for quantum
+       workloads
+   •   CUDA 12.x - Required for cuQuantum acceleration
+   •   Ubuntu 22.04/24.04 - Supported operating system
+
+
+
+1.2 Installing CUDA Quantum
+Install CUDA Quantum using pip (recommended for Python workflows):
+       # Install CUDA Quantum
+       pip install cuda-quantum
+       # Verify installation
+
+       python -c "import cudaq; print(cudaq.__version__)"
+
+
+
+
+1.3 Installing cuQuantum Appliance (Alternative)
+For users preferring containerized environments:
+# Pull the latest cuQuantum Appliance container
+docker pull nvcr.io/nvidia/cuquantum-appliance:latest
+
+
+# Run the container
+docker run --gpus all -it --rm \
+  -v $(pwd):/workspace \
+  nvcr.io/nvidia/cuquantum-appliance:latest
+
+
+
+Note: The cuQuantum Appliance includes CUDA Quantum, cuQuantum SDK, Qiskit,
+Cirq, and other popular quantum computing frameworks pre-configured for optimal
+performance.
+2. Simulating a 15-Qubit Circuit (Step-by-Step)
+2.1 Understanding Memory Requirements
+Before building the circuit, understand the memory requirements:
+      Memory (bytes) = 2^n × 16
+
+
+      For 15 qubits:
+      2^15 × 16 = 32,768 × 16 = 524,288 bytes (~512 KB)
+
+
+
+
+2.2 Creating the Quantum Circuit
+Create a Python file (e.g., quantum_15qubit.py) with the following content:
+      import cudaq
+      import numpy as np
+      from time import time
+
+
+      # Define a 15-qubit quantum circuit
+      @cudaq.kernel
+      def ghz_15_qubit():
+           """Create a 15-qubit GHZ state"""
+           # Allocate 15 qubits
+           qubits = cudaq.qvector(15)
+
+
+           # Create superposition on first qubit
+           h(qubits[0])
+
+
+           # Entangle all qubits
+           for i in range(14):
+                x.ctrl(qubits[i], qubits[i + 1])
+
+
+           # Measure all qubits
+           mz(qubits)
+
+
+
+
+      # Execute the circuit
+      if __name__ == "__main__":
+           print("Simulating 15-qubit GHZ circuit...")
+
+
+           # Run with cuQuantum backend
+           cudaq.set_target("nvidia")    # Uses cuQuantum
+
+
+           start_time = time()
+           result = cudaq.sample(ghz_15_qubit, shots_count=10000)
+           end_time = time()
+
+
+          print(f"Simulation completed in {end_time - start_time:.2f}
+      seconds")
+           print(f"\nResults:")
+           result.dump()
+
+
+
+
+2.3 Running the Simulation
+Execute the script:
+      python quantum_15qubit.py
+
+
+
+      Expected Output: The GHZ state should produce measurements clustered around
+      |000000000000000⟩ and |111111111111111⟩, demonstrating perfect entanglement
+      across all 15 qubits.
+
+
+
+
+2.4 Advanced Circuit: Quantum Fourier Transform (QFT)
+Implement a more complex 15-qubit algorithm:
+      @cudaq.kernel
+      def qft_15_qubit():
+           """15-qubit Quantum Fourier Transform"""
+           qubits = cudaq.qvector(15)
+
+
+           # Initialize with some state
+           for i in range(3):
+                x(qubits[i])
+
+
+           # Apply QFT
+           for j in range(15):
+                h(qubits[j])
+                for k in range(j + 1, 15):
+                      angle = np.pi / (2 ** (k - j))
+                      r1.ctrl(angle, qubits[k], qubits[j])
+# Swap qubits for correct output
+for i in range(7):
+   swap(qubits[i], qubits[14 - i])
+
+
+mz(qubits)
+3. Scaling to Maximum Capacity (33+ Qubits)
+3.1 Memory Scaling Analysis
+Understanding the exponential memory growth:
+       Qubits              States              Memory             Feasible?
+
+        15                 32,768              512 KB            ✓ Excellent
+
+        20               1,048,576             16 MB             ✓ Excellent
+
+        25               33,554,432            512 MB           ✓ Very Good
+
+        30             1,073,741,824           16 GB               ✓ Good
+
+        33             8,589,934,592           128 GB           ✓ Maximum
+
+        34             17,179,869,184          256 GB         ✗ Exceeds RAM
+
+
+
+
+3.2 Implementing a 33-Qubit Circuit
+This represents the absolute maximum for state vector simulation on my DGX Spark:
+      import cudaq
+      import numpy as np
+      from time import time
+      import psutil
+
+
+      @cudaq.kernel
+      def max_capacity_circuit():
+          """33-qubit circuit - Maximum state vector capacity"""
+          qubits = cudaq.qvector(33)
+
+
+          # Create entangled state
+          h(qubits[0])
+          for i in range(32):
+                x.ctrl(qubits[i], qubits[i + 1])
+
+
+          mz(qubits)
+
+
+
+
+      if __name__ == "__main__":
+          print("WARNING: This will use ~128GB of memory")
+    print(f"Available memory: {psutil.virtual_memory().available /
+1e9:.1f} GB\n")
+
+
+     cudaq.set_target("nvidia")
+
+
+     print("Starting 33-qubit simulation...")
+     start = time()
+     result = cudaq.sample(max_capacity_circuit, shots_count=1000)
+     end = time()
+
+
+     print(f"\nCompleted in {end - start:.2f} seconds")
+    print(f"Peak memory: {psutil.virtual_memory().used / 1e9:.1f}
+GB")
+
+
+
+Important: Running 33-qubit circuits will utilize nearly all available system memory.
+Ensure no other memory-intensive applications are running simultaneously.
+4. Beyond 33 Qubits: Tensor Network Methods
+For circuits with more than 33 qubits, tensor network methods offer a path forward by
+exploiting the structure of quantum circuits to reduce memory requirements.
+
+4.1 Matrix Product State (MPS) Simulation
+CUDA Quantum supports MPS simulation for circuits with limited entanglement:
+       import cudaq
+
+
+       @cudaq.kernel
+       def large_mps_circuit():
+           """40+ qubit circuit using MPS"""
+           qubits = cudaq.qvector(42)     # Can go even higher
+
+
+           # Apply gates with limited entanglement
+           for i in range(42):
+               h(qubits[i])
+               if i > 0:
+                    # Only entangle nearest neighbors
+                    x.ctrl(qubits[i-1], qubits[i])
+
+
+           mz(qubits)
+
+
+
+
+       # Configure MPS backend
+       cudaq.set_target("tensornet-mps")
+
+
+       # Run simulation
+       result = cudaq.sample(large_mps_circuit, shots_count=1000)
+       print(result.dump())
+
+
+
+
+4.2 When to Use Tensor Networks
+Tensor network methods are optimal for:
+   •   Nearest-neighbor circuits - Gates primarily connect adjacent qubits
+   •   Limited entanglement - Circuit structure doesn't create highly entangled
+       states
+   •   1D/2D lattice structures - Quantum simulation of condensed matter systems
+   •   Variational algorithms - VQE, QAOA with local connectivity
+Trade-off: MPS methods can handle 40+ qubits but accuracy degrades for highly
+entangled circuits. The bond dimension parameter controls the accuracy-memory
+trade-off.
+5. Performance Optimization and Best Practices
+5.1 Backend Selection Strategy
+          Backend                    Best For              Max Qubits
+
+ nvidia                      Full state vector, any              33
+                             circuit
+ tensornet-mps               1D circuits, low                    40+
+                             entanglement
+ density-matrix-cpu          Noisy circuits,                     ~16
+                             decoherence
+
+
+
+
+5.2 Memory Monitoring
+Always monitor memory usage when scaling up:
+      import psutil
+      import cudaq
+
+
+      def check_memory_feasibility(num_qubits):
+           """Check if simulation is feasible"""
+           required_bytes = 2 ** num_qubits * 16
+           available_bytes = psutil.virtual_memory().available
+
+
+           print(f"Qubits: {num_qubits}")
+           print(f"Required: {required_bytes / 1e9:.2f} GB")
+           print(f"Available: {available_bytes / 1e9:.2f} GB")
+
+
+           if required_bytes * 1.1 < available_bytes:   # 10% buffer
+              print("Status: FEASIBLE ✓")
+              return True
+           else:
+              print("Status: INSUFFICIENT MEMORY ✗")
+              return False
+
+
+
+
+      # Test various qubit counts
+      for qubits in [15, 20, 25, 30, 33, 34]:
+           check_memory_feasibility(qubits)
+          print()
+
+
+
+
+5.3 Batch Processing for Large Experiments
+For parameter sweeps or multiple experiments:
+      import cudaq
+      import numpy as np
+
+
+      @cudaq.kernel
+      def parameterized_circuit(theta: float):
+          """Circuit with tunable parameter"""
+          qubits = cudaq.qvector(30)    # Large but manageable
+
+
+          h(qubits[0])
+          for i in range(29):
+               ry(theta, qubits[i])
+               x.ctrl(qubits[i], qubits[i + 1])
+
+
+          mz(qubits)
+
+
+
+
+      # Batch execution
+      cudaq.set_target("nvidia")
+
+
+      theta_values = np.linspace(0, np.pi, 20)
+      results = []
+
+
+      for theta in theta_values:
+          result = cudaq.sample(parameterized_circuit, theta,
+      shots_count=1000)
+          results.append(result)
+          print(f"Completed theta={theta:.3f}")
+6. Practical Applications and Examples
+6.1 Quantum Chemistry: Molecular Simulation
+Simulate molecular systems using VQE (Variational Quantum Eigensolver):
+      import cudaq
+      from cudaq import spin
+
+
+      # Define molecular Hamiltonian (H2 molecule example)
+      hamiltonian = -1.0523 * spin.z(0) * spin.z(1) + \
+                       0.3979 * spin.x(0) * spin.x(1)
+
+
+      @cudaq.kernel
+      def ansatz(theta: float):
+           qubits = cudaq.qvector(2)
+           x(qubits[0])
+           ry(theta, qubits[1])
+           x.ctrl(qubits[1], qubits[0])
+
+
+      # Find ground state energy
+      energy = cudaq.observe(ansatz, hamiltonian, 0.59).expectation()
+      print(f"Ground state energy: {energy:.4f} Ha")
+
+
+
+
+6.2 Quantum Machine Learning: Feature Maps
+Encode classical data into quantum states for QML applications:
+      import cudaq
+      import numpy as np
+
+
+      @cudaq.kernel
+      def feature_map(data: list[float]):
+           """Encode classical data using angle embedding"""
+           n = len(data)
+           qubits = cudaq.qvector(n)
+
+
+           # Angle encoding
+           for i in range(n):
+               ry(data[i], qubits[i])
+
+
+           # Create entanglement
+          for i in range(n - 1):
+              x.ctrl(qubits[i], qubits[i + 1])
+
+
+          mz(qubits)
+
+
+
+
+      # Example: Encode 20 features
+      classical_data = np.random.rand(20) * np.pi
+      result = cudaq.sample(feature_map, classical_data.tolist(),
+      shots_count=1000)
+
+
+
+
+6.3 Quantum Optimization: QAOA
+Solve combinatorial optimization problems using QAOA (Quantum Approximate
+Optimization Algorithm):
+      import cudaq
+      from cudaq import spin
+      import numpy as np
+
+
+      # Define MaxCut problem
+      hamiltonian = 0.5 * (spin.z(0) * spin.z(1) + \
+                             spin.z(1) * spin.z(2) + \
+                             spin.z(2) * spin.z(0))
+
+
+      @cudaq.kernel
+      def qaoa_ansatz(gamma: float, beta: float):
+          qubits = cudaq.qvector(3)
+
+
+          # Initial state
+          for i in range(3):
+              h(qubits[i])
+
+
+          # Problem Hamiltonian layer
+          for i in range(3):
+              rzz(2 * gamma, qubits[i], qubits[(i+1)%3])
+
+
+          # Mixer layer
+          for i in range(3):
+              rx(2 * beta, qubits[i])
+7. Troubleshooting and Common Issues
+7.1 Memory Issues
+Problem: Out of memory error when simulating large circuits
+Solutions:
+   1. Verify available memory before running:
+             free -h    # Linux command
+
+   2. Close other applications to free memory
+   3. Use tensor network backends for 30+ qubit circuits
+   4. Reduce shot count for initial testing
+
+
+
+
+7.2 Performance Issues
+Problem: Slow simulation times
+Solutions:
+   •   Ensure CUDA drivers are up to date
+   •   Verify GPU is being used (check nvidia-smi)
+   •   Use appropriate backend for circuit structure
+   •   Profile code to identify bottlenecks
+
+
+
+
+7.3 Installation Issues
+Problem: CUDA Quantum import errors
+Solutions:
+   •   Verify Python version (3.8+ required):
+             python --version
+   •   Reinstall in a clean environment:
+             pip uninstall cuda-quantum
+             pip install cuda-quantum --upgrade
+   •   Check CUDA toolkit installation
+8. Additional Resources and Next Steps
+8.1 Official Documentation
+   •   CUDA Quantum Documentation
+   •   cuQuantum SDK
+   •   DGX Spark User Guide
+   •   NGC Container Registry
+
+
+
+
+8.2 Example Repositories
+   •   CUDA Quantum Examples
+   •   cuQuantum Python Examples
+
+
+
+
+8.3 Next Steps
+After mastering the basics:
+   5. Explore hybrid quantum-classical algorithms (VQE, QAOA)
+   6. Implement custom quantum gates and operations
+   7. Integrate with quantum chemistry packages (PySCF, OpenFermion)
+   8. Develop quantum machine learning models
+   9. Benchmark against cloud quantum hardware
+Conclusion
+My NVIDIA DGX Spark provides a powerful platform for quantum circuit simulation,
+enabling exploration of quantum algorithms from educational examples up to
+research-grade quantum computing experiments. With 128GB of unified memory,
+you can simulate circuits of up to 33 qubits using state vector methods, and extend
+even further using tensor network approaches for specific problem types.
+The combination of CUDA Quantum and cuQuantum leverages my system's GPU
+acceleration and memory bandwidth to achieve performance that would require
+significant cloud computing resources if run on traditional quantum simulation
+platforms. This local capability enables rapid iteration, cost-effective development,
+and complete control over my quantum computing research.
+As quantum computing continues to evolve, my DGX Spark positions you at the
+forefront of this transformative technology, with the tools and resources needed to
+develop and validate quantum algorithms that may run on future quantum hardware.
+
