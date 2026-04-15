@@ -4,6 +4,32 @@ This repository contains CUDA-Q Python scripts based on the guide in
 `Quantum_Circuit_Simulation_Guide_DGX_Spark.txt`, organized by section for easy execution.
 It is set up with `uv` + `pyproject.toml` and targets NVIDIA-accelerated quantum simulation workflows.
 
+## Why This Repo Matters (Especially for Beginners)
+
+If you are new to quantum computing, this repo gives you a practical learning path instead of
+jumping straight into abstract theory. You can run real circuits, inspect outputs, and understand
+how qubit count, memory, and backend choice affect what is feasible on actual hardware.
+
+It is beginner-friendly because it:
+
+- converts the guide into ready-to-run scripts by section
+- uses a reproducible setup (`uv` + `pyproject.toml`) so environment issues are minimized
+- starts with approachable 15-qubit examples before moving to larger simulations
+- includes memory checks and backend recommendations to prevent common beginner mistakes
+- demonstrates both full state-vector and tensor-network workflows in one place
+
+## DGX Spark Advantage
+
+DGX Spark is a strong platform for first-time and advanced users because it combines GPU
+acceleration with large unified memory, which is critical for quantum simulation workloads.
+In practice, this means:
+
+- faster local iteration compared to CPU-only development
+- ability to run larger state-vector circuits (up to around 33 qubits, memory dependent)
+- support for tensor-network methods (40+ qubits in suitable low-entanglement circuits)
+- less dependence on remote/cloud resources for daily experimentation
+- a smoother bridge from learning examples to research-style workflows
+
 ## What This Project Includes
 
 - Section 2: 15-qubit examples (GHZ and QFT)
